@@ -1,242 +1,436 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ZOOM BOT CONTROLLER</title>
-    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Meet Bot Controller</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* Previous styles same rahenge */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #0f172a;
-            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
         }
         .container {
             max-width: 1200px;
-            margin: auto;
+            margin: 0 auto;
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
             text-align: center;
+            color: white;
+            margin-bottom: 30px;
         }
-        .stats {
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
         .stat-card {
-            background: #1e293b;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 3em;
-            font-weight: bold;
-            color: #667eea;
-        }
-        .control-panel {
-            background: #1e293b;
-            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             border-radius: 15px;
-            margin-bottom: 30px;
+            padding: 20px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .stat-card h3 {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+        .main-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
         .form-group {
             margin-bottom: 20px;
         }
-        label {
+        .form-group label {
             display: block;
             margin-bottom: 8px;
-            color: #94a3b8;
+            font-weight: 600;
+            color: #333;
         }
-        input, select {
+        .form-group input, .form-group select {
             width: 100%;
             padding: 12px;
-            background: #334155;
-            border: 1px solid #475569;
-            border-radius: 8px;
-            color: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
             font-size: 16px;
+            transition: border-color 0.3s;
         }
-        button {
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .slider-container {
+            padding: 10px 0;
+        }
+        .slider {
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: #d3d3d3;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+        .user-count {
+            text-align: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+        .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             padding: 15px 30px;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
             cursor: pointer;
-            margin-right: 10px;
-            transition: transform 0.2s;
+            width: 100%;
+            transition: transform 0.3s, box-shadow 0.3s;
         }
-        button:hover {
+        .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
         }
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
-        .colab-list, .bot-list {
-            background: #1e293b;
+        .instances-list {
+            margin-top: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
             padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 30px;
         }
-        .colab-item, .bot-item {
+        .instance-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
-            padding: 15px;
-            background: #334155;
-            margin: 10px 0;
-            border-radius: 8px;
+            align-items: center;
+            border-left: 4px solid #667eea;
         }
-        .online { color: #4ade80; }
-        .busy { color: #fbbf24; }
-        .status-badge {
+        .instance-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .status-dot.active {
+            background: #28a745;
+            box-shadow: 0 0 10px #28a745;
+        }
+        .status-dot.inactive {
+            background: #dc3545;
+        }
+        .badge {
+            background: #667eea;
+            color: white;
             padding: 5px 10px;
-            border-radius: 20px;
+            border-radius: 5px;
             font-size: 12px;
         }
-        .status-running { background: #4ade80; color: black; }
-        .status-launching { background: #fbbf24; color: black; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            animation: slideIn 0.3s;
+            z-index: 1000;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .connection-status.connected {
+            border-left: 4px solid #28a745;
+        }
+        .connection-status.disconnected {
+            border-left: 4px solid #dc3545;
+        }
     </style>
 </head>
 <body>
+    <div class="connection-status connected" id="connectionStatus">
+        🔌 Connected to Server
+    </div>
+
     <div class="container">
         <div class="header">
-            <h1>🤖 ZOOM BOT CONTROL CENTER</h1>
-            <p>Connected Colabs: <span id="totalColabs">0</span> | Active Bots: <span id="totalBots">0</span></p>
+            <h1>🤖 Google Meet Bot Controller</h1>
+            <p>Control multiple Colab instances from one place</p>
         </div>
 
-        <div class="stats">
+        <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-value" id="availableSlots">0</div>
-                <div>Available Slots</div>
+                <h3>Total Bots Running</h3>
+                <div class="value" id="totalBots">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="activeColabs">0</div>
-                <div>Active Colabs</div>
+                <h3>Active Instances</h3>
+                <div class="value" id="activeInstances">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Max Per Instance</h3>
+                <div class="value" id="maxPerInstance">10</div>
             </div>
         </div>
 
-        <div class="control-panel">
-            <h2>🚀 Launch Bots</h2>
-            <div class="form-group">
-                <label>Meeting ID</label>
-                <input type="text" id="meetingId" placeholder="Enter Zoom Meeting ID">
+        <div class="main-panel">
+            <h2 style="margin-bottom: 20px; color: #333;">🎮 Control Panel</h2>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>📅 Meeting Code</label>
+                    <input type="text" id="meetingCode" placeholder="e.g., 99028293097" value="99028293097">
+                </div>
+                <div class="form-group">
+                    <label>🔑 Passcode</label>
+                    <input type="text" id="passcode" placeholder="e.g., 346634" value="346634">
+                </div>
             </div>
-            <div class="form-group">
-                <label>Passcode (Optional)</label>
-                <input type="text" id="passcode" placeholder="Enter passcode">
-            </div>
-            <div class="form-group">
-                <label>Number of Bots</label>
-                <input type="number" id="botCount" min="1" value="10">
-            </div>
-            <div class="form-group">
-                <label>Duration (minutes)</label>
-                <input type="number" id="duration" min="1" value="60">
-            </div>
-            <button onclick="launchBots()">LAUNCH BOTS</button>
-            <button class="btn-danger" onclick="terminateAll()">TERMINATE ALL</button>
-        </div>
 
-        <div class="colab-list">
-            <h2>📡 Connected Colabs</h2>
-            <div id="colabContainer"></div>
-        </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>⏱️ Duration (minutes)</label>
+                    <input type="number" id="duration" min="1" max="180" value="90">
+                </div>
+                <div class="form-group">
+                    <label>👥 Users per Instance (Max 10)</label>
+                    <input type="number" id="usersPerInstance" min="1" max="10" value="10">
+                </div>
+            </div>
 
-        <div class="bot-list">
-            <h2>🤖 Active Bots</h2>
-            <div id="botContainer"></div>
+            <div class="form-group">
+                <label>📊 Total Bots to Run: <span id="totalUsersDisplay">10</span></label>
+                <div class="slider-container">
+                    <input type="range" id="totalUsers" class="slider" min="1" max="100" value="10" step="1">
+                </div>
+                <div class="user-count" id="userCount">10</div>
+            </div>
+
+            <div class="form-group">
+                <label>🖥️ Mode</label>
+                <select id="headless" style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #e0e0e0;">
+                    <option value="true">Background Mode (Headless)</option>
+                    <option value="false">Visible Mode (Show Browser)</option>
+                </select>
+            </div>
+
+            <button class="btn" id="startBtn" onclick="startBots()">🚀 START BOTS</button>
+
+            <div class="instances-list">
+                <h3 style="margin-bottom: 15px; color: #333;">📡 Connected Instances</h3>
+                <div id="instances"></div>
+            </div>
         </div>
     </div>
 
     <script>
-        const socket = io();
+        const MAX_USERS_PER_INSTANCE = 10;
+        let registeredInstances = {};
         
-        socket.on('connect', () => {
-            console.log('Connected to server');
-        });
+        // Server URL (Railway app ka URL)
+        const SERVER_URL = window.location.origin;
+        
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.className = 'connection-status connected';
+                status.innerHTML = '🔌 Connected to Server';
+            } else {
+                status.className = 'connection-status disconnected';
+                status.innerHTML = '❌ Disconnected from Server';
+            }
+        }
 
-        socket.on('stats_update', (data) => {
-            updateUI(data);
-        });
+        // Fetch instances from server
+        async function fetchInstances() {
+            try {
+                const response = await fetch(`${SERVER_URL}/instances`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                registeredInstances = data;
+                updateConnectionStatus(true);
+                updateUI();
+            } catch (error) {
+                console.error('Error fetching instances:', error);
+                updateConnectionStatus(false);
+            }
+        }
 
-        socket.on('error', (data) => {
-            alert('Error: ' + data.message);
-        });
-
-        function updateUI(data) {
-            $('#totalColabs').text(data.total_colabs);
-            $('#totalBots').text(data.total_bots);
+        // Start bots
+        async function startBots() {
+            const totalUsers = parseInt(document.getElementById('totalUsers').value);
             
-            let available = 0;
-            for(let id in data.colabs) {
-                available += (10 - (data.colabs[id].busy_workers || 0));
+            // Calculate distribution
+            let remainingUsers = totalUsers;
+            let commands = [];
+            
+            for (let [instanceId, data] of Object.entries(registeredInstances)) {
+                if (remainingUsers <= 0) break;
+                
+                const available = MAX_USERS_PER_INSTANCE - (data.currentUsers || 0);
+                const assign = Math.min(available, remainingUsers);
+                
+                if (assign > 0) {
+                    commands.push({
+                        instanceId,
+                        users: assign,
+                        meetingCode: document.getElementById('meetingCode').value,
+                        passcode: document.getElementById('passcode').value,
+                        duration: parseInt(document.getElementById('duration').value),
+                        headless: document.getElementById('headless').value === 'true'
+                    });
+                    remainingUsers -= assign;
+                }
             }
-            $('#availableSlots').text(available);
-            $('#activeColabs').text(data.total_colabs);
+            
+            if (remainingUsers > 0) {
+                showToast(`⚠️ Only ${totalUsers - remainingUsers} bots can be started. Need more instances.`);
+                return;
+            }
 
-            // Colabs list
-            let colabHtml = '';
-            for(let id in data.colabs) {
-                let c = data.colabs[id];
-                let statusClass = c.status === 'online' ? 'online' : 'busy';
-                colabHtml += `
-                    <div class="colab-item">
-                        <span>Colab: ${id.substring(0,8)}...</span>
-                        <span>Bots: ${c.busy_workers || 0}/10</span>
-                        <span class="${statusClass}">${c.status}</span>
+            document.getElementById('startBtn').disabled = true;
+            
+            // Send commands to instances
+            for (const cmd of commands) {
+                try {
+                    const response = await fetch(`${SERVER_URL}/command/${cmd.instanceId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(cmd)
+                    });
+                    
+                    if (response.ok) {
+                        showToast(`✅ Command sent to ${cmd.instanceId}`);
+                    }
+                } catch (error) {
+                    console.error(`Failed to send command to ${cmd.instanceId}:`, error);
+                }
+            }
+            
+            showToast(`🚀 Started ${totalUsers - remainingUsers} bots`);
+            document.getElementById('startBtn').disabled = false;
+            
+            // Refresh instances after a delay
+            setTimeout(fetchInstances, 5000);
+        }
+
+        // Update UI
+        function updateUI() {
+            const instances = Object.entries(registeredInstances);
+            const totalBots = instances.reduce((sum, [_, data]) => sum + (data.currentUsers || 0), 0);
+            
+            document.getElementById('totalBots').textContent = totalBots;
+            document.getElementById('activeInstances').textContent = instances.length;
+            
+            // Update instances list
+            const instancesHtml = instances.map(([id, data]) => `
+                <div class="instance-item">
+                    <div>
+                        <strong>${id}</strong>
+                        <div style="font-size: 12px; color: #666;">
+                            Last seen: ${new Date(data.lastSeen).toLocaleTimeString()}
+                        </div>
                     </div>
-                `;
-            }
-            $('#colabContainer').html(colabHtml || '<p>No colabs connected</p>');
-
-            // Bots list
-            let botHtml = '';
-            for(let id in data.bots) {
-                let b = data.bots[id];
-                let statusClass = b.status === 'running' ? 'status-running' : 'status-launching';
-                botHtml += `
-                    <div class="bot-item">
-                        <span>Bot: ${id}</span>
-                        <span>Meeting: ${b.meeting_id}</span>
-                        <span class="status-badge ${statusClass}">${b.status}</span>
-                        <button onclick="terminateBot('${id}')" style="padding:5px;background:#ef4444;">✕</button>
+                    <div class="instance-status">
+                        <span class="badge">${data.currentUsers || 0}/${MAX_USERS_PER_INSTANCE} users</span>
+                        <span class="status-dot active"></span>
                     </div>
-                `;
-            }
-            $('#botContainer').html(botHtml || '<p>No active bots</p>');
+                </div>
+            `).join('');
+            
+            document.getElementById('instances').innerHTML = instancesHtml || '<p style="color: #666; text-align: center;">No instances connected. Start Colab notebooks to see them here.</p>';
         }
 
-        function launchBots() {
-            socket.emit('launch_bots', {
-                meeting_id: $('#meetingId').val(),
-                passcode: $('#passcode').val(),
-                bot_count: $('#botCount').val(),
-                duration: $('#duration').val()
-            });
+        // Show toast message
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
         }
 
-        function terminateAll() {
-            if(confirm('Terminate all bots?')) {
-                socket.emit('terminate_bots', { meeting_id: 'all' });
-            }
-        }
+        // Update slider display
+        document.getElementById('totalUsers').addEventListener('input', function(e) {
+            document.getElementById('userCount').textContent = e.target.value;
+            document.getElementById('totalUsersDisplay').textContent = e.target.value;
+        });
 
-        function terminateBot(botId) {
-            socket.emit('terminate_bot', { bot_id: botId });
-        }
-
-        // Auto refresh
-        setInterval(() => {
-            socket.emit('request_stats');
-        }, 2000);
+        // Fetch instances every 5 seconds
+        setInterval(fetchInstances, 5000);
+        
+        // Initial fetch
+        fetchInstances();
     </script>
 </body>
 </html>
